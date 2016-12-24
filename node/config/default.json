@@ -1,6 +1,6 @@
 {
-    "appSecret": "",
-    "pageAccessToken": "",
-    "validationToken": "",
-    "serverURL": ""
+    "appSecret": "9f87d27c5e3fdf6895e42700366c9494",
+    "pageAccessToken": "EAANl3xLOwTMBAJ2maH6jafjfhZCH2msq0RhnmcQNvEJgSNWQknxNBZBLRbYeocmrtNnpHJOatswaf1O5KorVLdLj1AgSGqKEm136MQnzsIDvh8cC6yNHHo4gw1BCBiE3jo9LOZCXFo2BEM5dywwLtZBL3XkNQlEQLAZBdSfa0mAZDZD",
+    "validationToken": "test",
+    "serverURL": "chat.graphwhy.org"
 }

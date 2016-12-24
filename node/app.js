@@ -239,7 +239,7 @@ function receivedMessage(event) {
     // Just logging message echoes to console
     console.log("Received echo for message %s and app %d with metadata %s", 
       messageId, appId, metadata);
-    return;
+    return "hi";
   } else if (quickReply) {
     var quickReplyPayload = quickReply.payload;
     console.log("Quick reply for message %s with payload %s",
@@ -546,18 +546,18 @@ function sendButtonMessage(recipientId) {
         type: "template",
         payload: {
           template_type: "button",
-          text: "This is test text",
+          text: "On a scale from 1 to 10, how likely are you to suggest this bot to a friend? With 10 being the highest chance to share.",
           buttons:[{
-            type: "web_url",
-            url: "https://www.oculus.com/en-us/rift/",
-            title: "Open Web URL"
+            type: "postback",
+            title: "1",
+            payload: "DEVELOPER_DEFINED_PAYLOAD"
           }, {
             type: "postback",
-            title: "Trigger Postback",
+            title: "2",
             payload: "DEVELOPER_DEFINED_PAYLOAD"
           }, {
             type: "phone_number",
-            title: "Call Phone Number",
+            title: "Can I volenteer?",
             payload: "+16505551234"
           }]
         }
@@ -597,18 +597,16 @@ function sendGenericMessage(recipientId) {
               payload: "Payload for first bubble",
             }],
           }, {
-            title: "touch",
-            subtitle: "Your Hands, Now in VR",
+            title: "GraphWhy.org",
+            subtitle: "Education through Graphs and Surveys.",
             item_url: "https://www.oculus.com/en-us/touch/",               
             image_url: SERVER_URL + "/assets/touch.png",
             buttons: [{
               type: "web_url",
-              url: "https://www.oculus.com/en-us/touch/",
-              title: "Open Web URL"
+              url: "https://graphwhy.org/",
+              title: "Learn more about us."
             }, {
-              type: "postback",
-              title: "Call Postback",
-              payload: "Payload for second bubble",
+              type: "element_share",
             }]
           }]
         }
