@@ -19,11 +19,15 @@ const
   request = require('request');
 
 var app = express();
+var fs = require('fs');
 app.set('port', process.env.PORT || 5000);
 app.set('view engine', 'ejs');
 app.use(bodyParser.json({ verify: verifyRequestSignature }));
 app.use(express.static('public'));
-
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+app.use(bodyParser.json());
 /*
  * Be sure to setup your config values before running this code. You can 
  * set them using environment variables or modifying the config file in /config.
@@ -61,6 +65,11 @@ if (!(APP_SECRET && VALIDATION_TOKEN && PAGE_ACCESS_TOKEN && SERVER_URL)) {
  * setup is the same token used here.
  *
  */
+
+app.get('/data', function(req, res){
+  res.send(fs.readFileSync('./questionstore.json','utf8'));
+});
+
 app.get('/webhook', function(req, res) {
   if (req.query['hub.mode'] === 'subscribe' &&
       req.query['hub.verify_token'] === VALIDATION_TOKEN) {
@@ -72,6 +81,61 @@ app.get('/webhook', function(req, res) {
   }  
 });
 
+/* SEND QUESTION POST REQUEST */
+app.post('/sendquestion', function( req, res ) {
+  var idlist = JSON.parse(fs.readFileSync('./idstore.json', 'utf8'));
+  for(var index = 0; index < idlist.length; index++){
+    sendQuestionPrompt(req.body, idlist[index]);
+  }
+
+
+
+ var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
+ questionlist.push({id:questionlist.length,prompt:req.body.prompt,answers:[{title:req.body.answer[0], value:0},{title:req.body.answer[1], value:0},{title:req.body.answer[2], value:0},{title:req.body.answer[3], value:0}]});
+
+ fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
+
+  res.redirect('/admin.html');
+});
+
+function sendQuestionPrompt(body, recipientId){
+  
+  var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
+
+  var messageData2 = {
+  recipient: {
+      id: recipientId
+  },
+    message:{
+    text:body.prompt,
+    quick_replies:[
+      {
+        content_type:"text",
+        title:body.answer[0],
+        payload:JSON.stringify({id:questionlist.length,answer:'0'})
+      },
+      {
+        content_type:"text",
+        title:body.answer[1],
+        payload:JSON.stringify({id:questionlist.length,answer:'1'})
+      },
+      {
+        content_type:"text",
+        title:body.answer[2],
+        payload:JSON.stringify({id:questionlist.length,answer:'2'})
+      },
+      {
+        content_type:"text",
+        title:body.answer[3],
+        payload:JSON.stringify({id:questionlist.length,answer:'3'})
+      }
+    ]
+  }
+  }
+
+  callSendAPI(messageData2);
+  
+}
 
 /*
  * All callbacks for Messenger are POST-ed. They will be sent to the same
@@ -220,14 +284,25 @@ function receivedMessage(event) {
   var recipientID = event.recipient.id;
   var timeOfMessage = event.timestamp;
   var message = event.message;
+  var idlist = JSON.parse(fs.readFileSync('./idstore.json', 'utf8'));
+  var collision = false;
+  //TODO: More efficient way to check for if id already xists something like storing in alphabetical order and using a stronger search
+  for(var index = 0; index < idlist.length; index++){
+    if(idlist[index] == senderID){
+      collision = true;
+    }
+  }
+  if(!collision){
+    idlist.push(senderID);
+  }
+  fs.writeFileSync('./idstore.json', JSON.stringify(idlist) , 'utf-8');
 
   console.log("Received message for user %d and page %d at %d with message:", 
     senderID, recipientID, timeOfMessage);
   console.log(JSON.stringify(message));
 
   var isEcho = message.is_echo;
-  var messageId = message.mid;
-  var appId = message.app_id;
+
   var metadata = message.metadata;
 
   // You may get a text or attachment but not both
@@ -242,10 +317,20 @@ function receivedMessage(event) {
     return "hi";
   } else if (quickReply) {
     var quickReplyPayload = quickReply.payload;
-    console.log("Quick reply for message %s with payload %s",
-      messageId, quickReplyPayload);
+    var payyy = JSON.parse(quickReplyPayload);    
+ 
+ var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
+ for(var index = 0; index < questionlist.length; index++){
+   if(questionlist[index].id == payyy.id){
+     questionlist[index].answers[parseInt(payyy.answer)].value+=1;
+   }
+ }
+ console.log(questionlist);
+ fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
 
-    sendTextMessage(senderID, "Quick reply tapped");
+
+     
+//    sendTextMessage(senderID, "Quick reply tapped");
     return;
   }
 
@@ -697,17 +782,22 @@ function sendQuickReply(recipientId) {
       quick_replies: [
         {
           "content_type":"text",
-          "title":"Action",
+          "title":"Strongly Agree",
           "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_ACTION"
         },
         {
           "content_type":"text",
-          "title":"Comedy",
+          "title":"Agree",
           "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_COMEDY"
         },
         {
           "content_type":"text",
-          "title":"Drama",
+          "title":"Disagree",
+          "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_DRAMA"
+        },
+        {
+          "content_type":"text",
+          "title":"Strongly disagree",
           "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_DRAMA"
         }
       ]
@@ -716,7 +806,6 @@ function sendQuickReply(recipientId) {
 
   callSendAPI(messageData);
 }
-
 /*
  * Send a read receipt to indicate the message has been read
  *
