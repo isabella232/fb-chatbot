@@ -87,14 +87,36 @@ app.post('/sendquestion', function( req, res ) {
   for(var index = 0; index < idlist.length; index++){
     sendQuestionPrompt(req.body, idlist[index]);
   }
-
-
-
- var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
- questionlist.push({id:questionlist.length,prompt:req.body.prompt,answers:[{title:req.body.answer[0], value:0},{title:req.body.answer[1], value:0},{title:req.body.answer[2], value:0},{title:req.body.answer[3], value:0}]});
-
- fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
-
+  var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
+  questionlist.push(
+		{
+			id:questionlist.length,
+			prompt:req.body.prompt,
+			answers:[
+				{
+					title:req.body.answer[0],
+					voters:[],
+					value:0
+				},
+				{
+					title:req.body.answer[1],
+					voters:[],
+					value:0
+				},
+				{
+					title:req.body.answer[2], 
+					voters:[],
+					value:0
+				},
+				{
+					title:req.body.answer[3], 
+					voters:[],
+					value:0
+				}
+			]
+		}
+  );
+  fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
   res.redirect('/admin.html');
 });
 
@@ -304,7 +326,8 @@ function receivedMessage(event) {
   var isEcho = message.is_echo;
 
   var metadata = message.metadata;
-
+  var messageId = message.mid;
+  var appId = message.app_id;
   // You may get a text or attachment but not both
   var messageText = message.text;
   var messageAttachments = message.attachments;
@@ -318,19 +341,16 @@ function receivedMessage(event) {
   } else if (quickReply) {
     var quickReplyPayload = quickReply.payload;
     var payyy = JSON.parse(quickReplyPayload);    
- 
- var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
- for(var index = 0; index < questionlist.length; index++){
-   if(questionlist[index].id == payyy.id){
-     questionlist[index].answers[parseInt(payyy.answer)].value+=1;
-   }
- }
- console.log(questionlist);
- fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
-
-
-     
-//    sendTextMessage(senderID, "Quick reply tapped");
+ 	 var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
+ 	 for(var index = 0; index < questionlist.length; index++){
+   	 if(questionlist[index].id == payyy.id){
+    	    questionlist[index].answers[parseInt(payyy.answer)].value+=1;
+    	    questionlist[index].answers[parseInt(payyy.answer)].voters.push(senderID); 
+  		 }
+	 }
+ 	 console.log(questionlist);
+ 	 fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
+     //    sendTextMessage(senderID, "Quick reply tapped");
     return;
   }
 
@@ -609,7 +629,7 @@ function sendTextMessage(recipientId, messageText) {
       id: recipientId
     },
     message: {
-      text: messageText,
+      text: "Features limited, please wait for next survey, Thank you",
       metadata: "DEVELOPER_DEFINED_METADATA"
     }
   };
