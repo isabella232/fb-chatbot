@@ -17,6 +17,8 @@ const
   express = require('express'),
   https = require('https'),  
   request = require('request');
+  const apiai = require('apiai');
+  const apiaiApp = apiai('7b0660a038b74960b342265fafc0beee');
 
 var app = express();
 var fs = require('fs');
@@ -154,9 +156,7 @@ function sendQuestionPrompt(body, recipientId){
     ]
   }
   }
-
-  callSendAPI(messageData2);
-  
+  callSendAPI(messageData2);  
 }
 
 /*
@@ -306,6 +306,7 @@ function receivedMessage(event) {
   var recipientID = event.recipient.id;
   var timeOfMessage = event.timestamp;
   var message = event.message;
+  var text = event.message.text;
   var idlist = JSON.parse(fs.readFileSync('./idstore.json', 'utf8'));
   var collision = false;
   //TODO: More efficient way to check for if id already xists something like storing in alphabetical order and using a stronger search
@@ -318,6 +319,20 @@ function receivedMessage(event) {
     idlist.push(senderID);
   }
   fs.writeFileSync('./idstore.json', JSON.stringify(idlist) , 'utf-8');
+
+	var apiai = apiaiApp.textRequest(text, {
+		sessionId: 'gw-session-id'
+	});
+	apiai.on('response', (response) => {
+		sendTextMessage(senderID, response.result.fulfillment.speech);
+		console.log(response)
+	});
+	apiai.on('error', (error) => {
+		console.log(error);
+	});
+	apiai.end();
+
+
 
   console.log("Received message for user %d and page %d at %d with message:", 
     senderID, recipientID, timeOfMessage);
@@ -354,6 +369,7 @@ function receivedMessage(event) {
     return;
   }
 
+/*
   if (messageText) {
 
     // If we receive a text message, check to see if it matches any special
@@ -418,6 +434,8 @@ function receivedMessage(event) {
   } else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
   }
+*/
+
 }
 
 
@@ -593,7 +611,6 @@ function sendVideoMessage(recipientId) {
       }
     }
   };
-
   callSendAPI(messageData);
 }
 
@@ -629,7 +646,7 @@ function sendTextMessage(recipientId, messageText) {
       id: recipientId
     },
     message: {
-      text: "Features limited, please wait for next survey, Thank you",
+      text: messageText,
       metadata: "DEVELOPER_DEFINED_METADATA"
     }
   };
@@ -669,7 +686,6 @@ function sendButtonMessage(recipientId) {
       }
     }
   };  
-
   callSendAPI(messageData);
 }
 
@@ -718,7 +734,6 @@ function sendGenericMessage(recipientId) {
       }
     }
   };  
-
   callSendAPI(messageData);
 }
 
@@ -729,7 +744,6 @@ function sendGenericMessage(recipientId) {
 function sendReceiptMessage(recipientId) {
   // Generate a random receipt ID as the API requires a unique ID
   var receiptId = "order" + Math.floor(Math.random()*1000);
-
   var messageData = {
     recipient: {
       id: recipientId
