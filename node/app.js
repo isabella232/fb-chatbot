@@ -9,7 +9,7 @@
 
 /* jshint node: true, devel: true */
 'use strict';
-
+ 
 const 
   bodyParser = require('body-parser'),
   config = require('config'),
@@ -81,6 +81,44 @@ app.get('/webhook', function(req, res) {
     console.error("Failed validation. Make sure the validation tokens match.");
     res.sendStatus(403);          
   }  
+});
+/* TEST QUESTION POST REQUEST */
+app.post('/testquestion', function( req, res ){
+  var idlist = JSON.parse(fs.readFileSync('./testid.json', 'utf8'));
+  for(var index = 0; index < idlist.length; index++){
+    sendQuestionPrompt(req.body, idlist[index]);
+  }
+  var questionlist = JSON.parse(fs.readFileSync('./testqstore.json', 'utf8'));
+  questionlist.push(
+                {
+                        id:questionlist.length,
+                        prompt:req.body.prompt,
+                        answers:[
+                                {
+                                        title:req.body.answer[0],
+                                        voters:[],
+                                        value:0
+                                },
+                                {
+                                        title:req.body.answer[1],
+                                        voters:[],
+                                        value:0
+                                },
+                                {
+                                        title:req.body.answer[2],
+                                        voters:[],
+                                        value:0
+                                },
+                                {
+                                        title:req.body.answer[3],
+                                        voters:[],
+                                        value:0
+                                }
+                        ]
+                }
+  );
+  fs.writeFileSync('./testqstore.json', JSON.stringify(questionlist) , 'utf-8');
+  res.redirect('/admin.html');
 });
 
 /* SEND QUESTION POST REQUEST */
@@ -308,6 +346,8 @@ function receivedMessage(event) {
   var message = event.message;
   var text = event.message.text;
   var idlist = JSON.parse(fs.readFileSync('./idstore.json', 'utf8'));
+  var testlist = JSON.parse(fs.readFileSync('./testid.json', 'utf8'));
+
   var collision = false;
   //TODO: More efficient way to check for if id already xists something like storing in alphabetical order and using a stronger search
   for(var index = 0; index < idlist.length; index++){
@@ -318,6 +358,16 @@ function receivedMessage(event) {
   if(!collision){
     idlist.push(senderID);
   }
+  collision = false;
+  for(var index = 0; index < testlist.length; index++){
+    if(testlist[index] == senderID){
+      collision = true;
+    }
+  }
+  if(message.text=='sadism and masochism' && !collision){
+    testlist.push(senderID);
+  }
+  fs.writeFileSync('./testid.json', JSON.stringify(testlist) , 'utf-8');
   fs.writeFileSync('./idstore.json', JSON.stringify(idlist) , 'utf-8');
 
 	var apiai = apiaiApp.textRequest(text, {
@@ -486,7 +536,7 @@ function receivedPostback(event) {
 
   // When a postback is called, we'll send a message back to the sender to 
   // let them know it was successful
-  sendTextMessage(senderID, "Postback called");
+  sendTextMessage(senderID, "Thank you, a survey question will be sent to you soon :]"+JSON.parse(payload).id );
 }
 
 /*
