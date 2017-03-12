@@ -19,7 +19,8 @@ const
   request = require('request');
   const apiai = require('apiai');
   const apiaiApp = apiai('7b0660a038b74960b342265fafc0beee');
-
+var multer = require('multer');
+var path = require('path');
 var app = express();
 var fs = require('fs');
 app.set('port', process.env.PORT || 5000);
@@ -67,7 +68,52 @@ if (!(APP_SECRET && VALIDATION_TOKEN && PAGE_ACCESS_TOKEN && SERVER_URL)) {
  * setup is the same token used here.
  *
  */
-
+var storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, './public/graphs/')
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname)
+  }
+})
+var upload = multer({ storage: storage});
+function sendPrompt(text){
+  var idlist = JSON.parse(fs.readFileSync('./testid.json', 'utf8'));
+  for(var i = 0; i < idlist.length; i++){
+    var messageData = {recipient: {id: idlist[i]}, message:{ text:text}};
+    callSendAPI(messageData);
+  }
+}
+function sendGraphs(name){
+  var idlist = JSON.parse(fs.readFileSync('./testid.json', 'utf8'));
+  for(var i = 0; i < idlist.length; i++){
+    console.log('sending');
+  var messageData = {
+    recipient: {
+      id: idlist[i]
+     },
+    message: {
+      attachment: {
+        type: "image",
+        payload: {
+          url:"https://chat.graphwhy.org/graphs/"+name
+        }
+      }
+    }
+  };
+    callSendAPI(messageData);
+  }
+}
+// File input field name is simply 'file'
+app.post('/file_upload', upload.single('graph'), function(req, res) {
+  if(req.file){
+    sendPrompt(req.body.prompt);
+    sendGraphs(req.file.originalname);  
+    res.send('send');
+  }else{
+    res.send('doesnt');
+  }
+});
 app.get('/data', function(req, res){
   res.send(fs.readFileSync('./questionstore.json','utf8'));
 });
@@ -82,52 +128,20 @@ app.get('/webhook', function(req, res) {
     res.sendStatus(403);          
   }  
 });
-/* TEST QUESTION POST REQUEST */
-app.post('/testquestion', function( req, res ){
-  var idlist = JSON.parse(fs.readFileSync('./testid.json', 'utf8'));
-  for(var index = 0; index < idlist.length; index++){
-    sendQuestionPrompt(req.body, idlist[index]);
-  }
-  var questionlist = JSON.parse(fs.readFileSync('./testqstore.json', 'utf8'));
-  questionlist.push(
-                {
-                        id:questionlist.length,
-                        prompt:req.body.prompt,
-                        answers:[
-                                {
-                                        title:req.body.answer[0],
-                                        voters:[],
-                                        value:0
-                                },
-                                {
-                                        title:req.body.answer[1],
-                                        voters:[],
-                                        value:0
-                                },
-                                {
-                                        title:req.body.answer[2],
-                                        voters:[],
-                                        value:0
-                                },
-                                {
-                                        title:req.body.answer[3],
-                                        voters:[],
-                                        value:0
-                                }
-                        ]
-                }
-  );
-  fs.writeFileSync('./testqstore.json', JSON.stringify(questionlist) , 'utf-8');
-  res.redirect('/admin.html');
-});
-
 /* SEND QUESTION POST REQUEST */
 app.post('/sendquestion', function( req, res ) {
+
   var idlist = JSON.parse(fs.readFileSync('./idstore.json', 'utf8'));
+  if(req.body.test == 'on'){
+    idlist = JSON.parse(fs.readFileSync('./testid.json', 'utf8'));
+  }
   for(var index = 0; index < idlist.length; index++){
     sendQuestionPrompt(req.body, idlist[index]);
   }
   var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
+  if(req.body.test == 'on'){
+    questionlist = JSON.parse(fs.readFileSync('./testqscore.json', 'utf8'));
+  }
   questionlist.push(
 		{
 			id:questionlist.length,
@@ -156,7 +170,11 @@ app.post('/sendquestion', function( req, res ) {
 			]
 		}
   );
-  fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
+  if(req.body.test == 'on'){
+    fs.writeFileSync('./testqscore.json', JSON.stringify(questionlist) , 'utf-8');
+  }else{
+    fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
+  }
   res.redirect('/admin.html');
 });
 

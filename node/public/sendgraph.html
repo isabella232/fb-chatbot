@@ -5,15 +5,12 @@
 </head>
 <body style="text-align:center">
   Welcome to admin panel Alex
-  <form method="POST" action="/sendquestion">
-  <input type="text"  name="prompt" value="Question Prompt"/><br/>
+  <form method="POST" action="/file_upload" enctype="multipart/form-data">
   <br/>Testing:
 <input class="w3-radio" type="radio" name="test" value="on">On
 <input class="fuck" type="radio" name="test" value="off" checked>Off<br/><br/>
-  A.<input type="text" name="answer[]"/><br/>
-  B.<input type="text" name="answer[]"/><br/>
-  C.<input type="text" name="answer[]"/><br/>
-  D.<input type="text" name="answer[]"/><br/>
+  <input type="text" name="prompt" /><br/>
+  <input type="file" name="graph" /><br/>
   <br/><input type="submit"/>
   </form>
 </body>
