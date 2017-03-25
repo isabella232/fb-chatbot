@@ -15,8 +15,10 @@ const
   config = require('config'),
   crypto = require('crypto'),
   express = require('express'),
-  https = require('https'),  
+  https = require('https'),
+  cron = require('node-cron'),  
   request = require('request');
+
   const apiai = require('apiai');
   const apiaiApp = apiai('7b0660a038b74960b342265fafc0beee');
 var multer = require('multer');
@@ -172,15 +174,21 @@ app.post('/sendquestion', function( req, res ) {
   }else{
     fs.writeFileSync('./questionstore.json', JSON.stringify(questionlist) , 'utf-8');
   }
-  var milli = 10000;
-  for(var index = 0; index < idlist.length; index++){
-    setTimeout( sendQuestionPrompt(req.body, idlist[index]), milli*index );  
-  }
+ 
+  let index = 0; 
+  let throttle = cron.schedule('*/1 * * * * *',function(){
+    sendQuestionPrompt(req.body, idlist[index]);   
+    index++;	
+    if(index == idlist.length){
+      throttle.stop();
+      console.log("cronjob(throttle) stopped");
+    }
+  });
   res.redirect('/admin.html');
 });
 
 function sendQuestionPrompt(body, recipientId){
-  
+  console.log("sendQuestionPrompt called");
   var questionlist = JSON.parse(fs.readFileSync('./questionstore.json', 'utf8'));
 
   var messageData2 = {
